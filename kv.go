@@ -23,21 +23,17 @@ import (
 	"time"
 )
 
-// Notice: Experimental Preview
-//
-// This functionality is EXPERIMENTAL and may be changed in later releases.
+// KeyValueManager creates, deletes or binds to Key-Value stores
 type KeyValueManager interface {
 	// KeyValue will lookup and bind to an existing KeyValue store.
-	KeyValue(bucket string) (KeyValue, error)
+	KeyValue(bucket string, opts ...KeyValueOption) (KeyValue, error)
 	// CreateKeyValue will create a KeyValue store with the following configuration.
-	CreateKeyValue(cfg *KeyValueConfig) (KeyValue, error)
+	CreateKeyValue(cfg *KeyValueConfig, opts ...KeyValueOption) (KeyValue, error)
 	// DeleteKeyValue will delete this KeyValue store (JetStream stream).
 	DeleteKeyValue(bucket string) error
 }
 
-// Notice: Experimental Preview
-//
-// This functionality is EXPERIMENTAL and may be changed in later releases.
+// KeyValue manages data in a Key-Value store
 type KeyValue interface {
 	// Get returns the latest value for the key.
 	Get(key string) (entry KeyValueEntry, err error)
@@ -54,18 +50,17 @@ type KeyValue interface {
 	// Purge will place a delete marker and remove all previous revisions.
 	Purge(key string) error
 	// Watch for any updates to keys that match the keys argument which could include wildcards.
-	// Watch will send a nil entry when it has received all initial values.
 	Watch(keys string, opts ...WatchOpt) (KeyWatcher, error)
 	// WatchAll will invoke the callback for all updates.
 	WatchAll(opts ...WatchOpt) (KeyWatcher, error)
 	// Keys will return all keys.
-	Keys(opts ...WatchOpt) ([]string, error)
+	Keys(opts ...CancelOpt) ([]string, error)
 	// History will return all historical values for the key.
-	History(key string, opts ...WatchOpt) ([]KeyValueEntry, error)
+	History(key string, opts ...CancelOpt) ([]KeyValueEntry, error)
 	// Bucket returns the current bucket name.
 	Bucket() string
 	// PurgeDeletes will remove all current delete markers.
-	PurgeDeletes(opts ...WatchOpt) error
+	PurgeDeletes(opts ...CancelOpt) error
 	// Status retrieves the status and configuration of a bucket
 	Status() (KeyValueStatus, error)
 }
@@ -91,19 +86,74 @@ type KeyValueStatus interface {
 // KeyWatcher is what is returned when doing a watch.
 type KeyWatcher interface {
 	// Updates returns a channel to read any updates to entries.
+	//
+	// A nil value is sent over the channel indicating that the end of initial data was reached,
+	// initial data may be the last available message or an indication that no messages are available
+	// at the time the watch was created.
 	Updates() <-chan KeyValueEntry
 	// Stop will stop this watcher.
 	Stop() error
 }
 
-type WatchOpt interface {
-	configureWatcher(opts *watchOpts) error
+// KeyValueOption configures the Key-Value store instance
+type KeyValueOption func(*kvs) error
+
+// BucketSubjectPrefix sets a custom prefix to use for write operations like Put() to the bucket.
+// Usually keys are accessed as $KV.BUCKET.KEY, this would replace the $KV.BUCKET. part of
+// that subject.
+//
+// This facilitates cross account access to buckets, the APIPrefix() option should be used when
+// creating the JetStream context to configure access to the imported JetStream API
+func BucketSubjectPrefix(p string) KeyValueOption {
+	return func(kv *kvs) error {
+		if p == _EMPTY_ {
+			return nil
+		}
+
+		kv.writePre = p
+		if !strings.HasSuffix(kv.writePre, ".") {
+			kv.writePre = kv.writePre + "."
+		}
+
+		return nil
+	}
 }
 
-// For nats.Context() support.
+// CancelOpt are options to facilitate interruption of potentially blocking calls
+type CancelOpt interface {
+	configureCancel(opts *cancelOpts) error
+}
+
 func (ctx ContextOpt) configureWatcher(opts *watchOpts) error {
 	opts.ctx = ctx
 	return nil
+}
+
+func (ctx ContextOpt) configureCancel(opts *cancelOpts) error {
+	opts.ctx = ctx
+	return nil
+}
+
+type cancelOpts struct {
+	ctx context.Context
+}
+
+func newCancelOpts(opts ...CancelOpt) (*cancelOpts, error) {
+	var o cancelOpts
+	for _, opt := range opts {
+		if opt != nil {
+			if err := opt.configureCancel(&o); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &o, nil
+}
+
+// WatchOpt configures watchers
+type WatchOpt interface {
+	configureWatcher(opts *watchOpts) error
 }
 
 type watchOpts struct {
@@ -233,7 +283,7 @@ var (
 )
 
 // KeyValue will lookup and bind to an existing KeyValue store.
-func (js *js) KeyValue(bucket string) (KeyValue, error) {
+func (js *js) KeyValue(bucket string, opts ...KeyValueOption) (KeyValue, error) {
 	if !js.nc.serverMinVersion(2, 6, 2) {
 		return nil, errors.New("nats: key-value requires at least server version 2.6.2")
 	}
@@ -260,11 +310,30 @@ func (js *js) KeyValue(bucket string) (KeyValue, error) {
 		pre:    fmt.Sprintf(kvSubjectsPreTmpl, bucket),
 		js:     js,
 	}
+
+	err = kv.configure(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	return kv, nil
 }
 
+func (kv *kvs) configure(opts []KeyValueOption) error {
+	kv.writePre = kv.pre
+
+	for _, opt := range opts {
+		err := opt(kv)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // CreateKeyValue will create a KeyValue store with the following configuration.
-func (js *js) CreateKeyValue(cfg *KeyValueConfig) (KeyValue, error) {
+func (js *js) CreateKeyValue(cfg *KeyValueConfig, opts ...KeyValueOption) (KeyValue, error) {
 	if !js.nc.serverMinVersion(2, 6, 2) {
 		return nil, errors.New("nats: key-value requires at least server version 2.6.2")
 	}
@@ -316,6 +385,13 @@ func (js *js) CreateKeyValue(cfg *KeyValueConfig) (KeyValue, error) {
 		pre:    fmt.Sprintf(kvSubjectsPreTmpl, cfg.Bucket),
 		js:     js,
 	}
+
+	kv.writePre = kv.pre
+	err := kv.configure(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	return kv, nil
 }
 
@@ -329,10 +405,11 @@ func (js *js) DeleteKeyValue(bucket string) error {
 }
 
 type kvs struct {
-	name   string
-	stream string
-	pre    string
-	js     *js
+	name     string
+	stream   string
+	pre      string
+	writePre string
+	js       *js
 }
 
 // Underlying entry.
@@ -422,7 +499,7 @@ func (kv *kvs) Put(key string, value []byte) (revision uint64, err error) {
 	}
 
 	var b strings.Builder
-	b.WriteString(kv.pre)
+	b.WriteString(kv.writePre)
 	b.WriteString(key)
 
 	pa, err := kv.js.Publish(b.String(), value)
@@ -460,7 +537,7 @@ func (kv *kvs) Update(key string, value []byte, revision uint64) (uint64, error)
 	}
 
 	var b strings.Builder
-	b.WriteString(kv.pre)
+	b.WriteString(kv.writePre)
 	b.WriteString(key)
 
 	m := Msg{Subject: b.String(), Header: Header{}, Data: value}
@@ -489,7 +566,7 @@ func (kv *kvs) delete(key string, purge bool) error {
 	}
 
 	var b strings.Builder
-	b.WriteString(kv.pre)
+	b.WriteString(kv.writePre)
 	b.WriteString(key)
 
 	// DEL op marker. For watch functionality.
@@ -507,8 +584,18 @@ func (kv *kvs) delete(key string, purge bool) error {
 
 // PurgeDeletes will remove all current delete markers.
 // This is a maintenance option if there is a larger buildup of delete markers.
-func (kv *kvs) PurgeDeletes(opts ...WatchOpt) error {
-	watcher, err := kv.WatchAll(opts...)
+func (kv *kvs) PurgeDeletes(opts ...CancelOpt) error {
+	o, err := newCancelOpts(opts...)
+	if err != nil {
+		return err
+	}
+
+	wopts := []WatchOpt{MetaOnly()}
+	if o.ctx != nil {
+		wopts = append(wopts, Context(o.ctx))
+	}
+
+	watcher, err := kv.WatchAll(wopts...)
 	if err != nil {
 		return err
 	}
@@ -516,7 +603,7 @@ func (kv *kvs) PurgeDeletes(opts ...WatchOpt) error {
 
 	var deleteMarkers []KeyValueEntry
 	for entry := range watcher.Updates() {
-		if entry == nil {
+		if entry == nil { // no data or end of data
 			break
 		}
 		if op := entry.Operation(); op == KeyValueDelete || op == KeyValuePurge {
@@ -528,6 +615,7 @@ func (kv *kvs) PurgeDeletes(opts ...WatchOpt) error {
 		pr streamPurgeRequest
 		b  strings.Builder
 	)
+
 	// Do actual purges here.
 	for _, entry := range deleteMarkers {
 		b.WriteString(kv.pre)
@@ -542,10 +630,19 @@ func (kv *kvs) PurgeDeletes(opts ...WatchOpt) error {
 	return nil
 }
 
-// Keys() will return all keys.
-func (kv *kvs) Keys(opts ...WatchOpt) ([]string, error) {
-	opts = append(opts, IgnoreDeletes(), MetaOnly())
-	watcher, err := kv.WatchAll(opts...)
+// Keys will return all keys.
+func (kv *kvs) Keys(opts ...CancelOpt) ([]string, error) {
+	o, err := newCancelOpts(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	wopts := []WatchOpt{IgnoreDeletes(), MetaOnly()}
+	if o.ctx != nil {
+		wopts = append(wopts, Context(o.ctx))
+	}
+
+	watcher, err := kv.WatchAll(wopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +650,7 @@ func (kv *kvs) Keys(opts ...WatchOpt) ([]string, error) {
 
 	var keys []string
 	for entry := range watcher.Updates() {
-		if entry == nil {
+		if entry == nil { // no data present or end of data
 			break
 		}
 		keys = append(keys, entry.Key())
@@ -565,9 +662,17 @@ func (kv *kvs) Keys(opts ...WatchOpt) ([]string, error) {
 }
 
 // History will return all values for the key.
-func (kv *kvs) History(key string, opts ...WatchOpt) ([]KeyValueEntry, error) {
-	opts = append(opts, IncludeHistory())
-	watcher, err := kv.Watch(key, opts...)
+func (kv *kvs) History(key string, opts ...CancelOpt) ([]KeyValueEntry, error) {
+	o, err := newCancelOpts(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	wopts := []WatchOpt{IncludeHistory()}
+	if o.ctx != nil {
+		wopts = append(wopts, Context(o.ctx))
+	}
+	watcher, err := kv.Watch(key, wopts...)
 	if err != nil {
 		return nil, err
 	}
@@ -575,9 +680,10 @@ func (kv *kvs) History(key string, opts ...WatchOpt) ([]KeyValueEntry, error) {
 
 	var entries []KeyValueEntry
 	for entry := range watcher.Updates() {
-		if entry == nil {
+		if entry == nil { // no data or end of data
 			break
 		}
+
 		entries = append(entries, entry)
 	}
 	if len(entries) == 0 {
@@ -588,6 +694,7 @@ func (kv *kvs) History(key string, opts ...WatchOpt) ([]KeyValueEntry, error) {
 
 // Implementation for Watch
 type watcher struct {
+	cancel  context.CancelFunc
 	updates chan KeyValueEntry
 	sub     *Subscription
 }
@@ -604,6 +711,10 @@ func (w *watcher) Updates() <-chan KeyValueEntry {
 func (w *watcher) Stop() error {
 	if w == nil {
 		return nil
+	}
+	if w.cancel != nil {
+		w.cancel()
+		w.cancel = nil
 	}
 	return w.sub.Unsubscribe()
 }
@@ -674,7 +785,10 @@ func (kv *kvs) Watch(keys string, opts ...WatchOpt) (KeyWatcher, error) {
 		}
 	}
 
-	// Check if we have anything pending.
+	// Check if we have anything pending. Ideally this is done by inspecting the
+	// consumer state returned by the server when creating the consumer, unfortunately
+	// here we use Subscribe() and OrderedConsumer() which means the consumer info
+	// is unreachable.
 	_, err := kv.js.GetLastMsg(kv.stream, keys)
 	if err == ErrMsgNotFound {
 		initDoneMarker = true
@@ -697,6 +811,7 @@ func (kv *kvs) Watch(keys string, opts ...WatchOpt) (KeyWatcher, error) {
 		return nil, err
 	}
 	w.sub = sub
+
 	return w, nil
 }
 

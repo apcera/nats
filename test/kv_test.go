@@ -105,6 +105,50 @@ func TestKeyValueBasics(t *testing.T) {
 	}
 }
 
+func TestKeyValueCrossAccount(t *testing.T) {
+	s, _ := RunServerWithConfig("configs/kv_accounts.conf")
+	defer shutdown(s)
+
+	setupBucket := func(t *testing.T) {
+		nc, err := nats.Connect(s.ClientURL(), nats.UserInfo("a", "a"))
+		expectOk(t, err)
+		defer nc.Close()
+
+		js, err := nc.JetStream()
+		expectOk(t, err)
+
+		js.DeleteKeyValue("CROSS")
+
+		_, err = js.CreateKeyValue(&nats.KeyValueConfig{Bucket: "CROSS", History: 10})
+		expectOk(t, err)
+	}
+
+	testAccount := func(t *testing.T, u, p, apiPre, kvPre string) {
+		setupBucket(t)
+
+		nc, err := nats.Connect(s.ClientURL(), nats.UserInfo(u, p))
+		expectOk(t, err)
+		defer nc.Close()
+
+		js, err := nc.JetStream(nats.APIPrefix(apiPre))
+		expectOk(t, err)
+
+		kv, err := js.KeyValue("CROSS", nats.BucketSubjectPrefix(kvPre))
+		expectOk(t, err)
+
+		_, err = kv.PutString("FOO", "BAR")
+		expectOk(t, err)
+		v, err := kv.Get("FOO")
+		expectOk(t, err)
+		if string(v.Value()) != "BAR" {
+			t.Fatalf("received wrong value: %q", v.Value())
+		}
+	}
+
+	testAccount(t, "o", "o", "fromA", "X.cross")
+	testAccount(t, "o", "o", "fromA", "X.cross.")
+}
+
 func TestKeyValueHistory(t *testing.T) {
 	s := RunBasicJetStreamServer()
 	defer shutdownJSServerAndRemoveStorage(t, s)
