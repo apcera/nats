@@ -3306,19 +3306,20 @@ func NewMsg(subject string) *Msg {
 }
 
 const (
-	hdrLine            = "NATS/1.0\r\n"
-	crlf               = "\r\n"
-	hdrPreEnd          = len(hdrLine) - len(crlf)
-	statusHdr          = "Status"
-	descrHdr           = "Description"
-	lastConsumerSeqHdr = "Nats-Last-Consumer"
-	lastStreamSeqHdr   = "Nats-Last-Stream"
-	consumerStalledHdr = "Nats-Consumer-Stalled"
-	noResponders       = "503"
-	noMessagesSts      = "404"
-	reqTimeoutSts      = "408"
-	controlMsg         = "100"
-	statusLen          = 3 // e.g. 20x, 40x, 50x
+	hdrLine              = "NATS/1.0\r\n"
+	crlf                 = "\r\n"
+	hdrPreEnd            = len(hdrLine) - len(crlf)
+	statusHdr            = "Status"
+	descrHdr             = "Description"
+	lastConsumerSeqHdr   = "Nats-Last-Consumer"
+	lastStreamSeqHdr     = "Nats-Last-Stream"
+	consumerStalledHdr   = "Nats-Consumer-Stalled"
+	noResponders         = "503"
+	noMessagesSts        = "404"
+	reqTimeoutSts        = "408"
+	leadershipChangedSts = "409"
+	controlMsg           = "100"
+	statusLen            = 3 // e.g. 20x, 40x, 50x
 )
 
 // decodeHeadersMsg will decode and headers.

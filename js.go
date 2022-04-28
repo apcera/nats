@@ -2453,6 +2453,9 @@ func checkMsg(msg *Msg, checkSts bool) (usrMsg bool, err error) {
 		// implementation. Regardless, ignore 408 errors until receiving at least
 		// one message.
 		err = ErrTimeout
+	case leadershipChangedSts:
+		// 409 indicates that the consumer leadership changed no the server. The client should ignore 409 errors.
+		err = ErrTimeout
 	default:
 		err = fmt.Errorf("nats: %s", msg.Header.Get(descrHdr))
 	}
