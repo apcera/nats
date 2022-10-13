@@ -15,6 +15,7 @@ package nats_test
 
 import (
 	"fmt"
+	"github.com/nats-io/nats.go/encoders/mongo"
 	"testing"
 	"time"
 
@@ -291,6 +292,48 @@ func TestRequestGOB(t *testing.T) {
 	defer nc.Close()
 
 	ec, err := NewEncodedConn(nc, GOB_ENCODER)
+	if err != nil {
+		t.Fatalf("Unable to create encoded connection: %v", err)
+	}
+	defer ec.Close()
+
+	ec.QueueSubscribe("foo.request", "g", func(subject, reply string, r *Request) {
+		if r.Name != "meg" {
+			t.Fatalf("Expected request to be 'meg', got %q", r)
+		}
+		response := &Person{Name: "meg", Age: 21}
+		ec.Publish(reply, response)
+	})
+
+	reply := Person{}
+	if err := ec.Request("foo.request", &Request{Name: "meg"}, &reply, time.Second); err != nil {
+		t.Fatalf("Failed to receive response: %v", err)
+	}
+	if reply.Name != "meg" || reply.Age != 21 {
+		t.Fatalf("Did not receive proper response, %+v", reply)
+	}
+}
+
+func TestRequestBson(t *testing.T) {
+	ts := RunServerOnPort(ENC_TEST_PORT)
+	defer ts.Shutdown()
+
+	type Request struct {
+		Name string `bson:"name"`
+	}
+
+	type Person struct {
+		Name string `bson:"name"`
+		Age  int    `bson:"age"`
+	}
+
+	nc, err := Connect(options.Url)
+	if err != nil {
+		t.Fatalf("Could not connect: %v", err)
+	}
+	defer nc.Close()
+
+	ec, err := NewEncodedConn(nc, mongo.BSON_ECODER)
 	if err != nil {
 		t.Fatalf("Unable to create encoded connection: %v", err)
 	}

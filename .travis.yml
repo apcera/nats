@@ -10,6 +10,7 @@ install:
     go install github.com/wadey/gocovmerge@latest;
     go install honnef.co/go/tools/cmd/staticcheck@latest;
     go install github.com/client9/misspell/cmd/misspell@latest;
+    go get go.mongodb.org/mongo-driver/mongo
   fi
 before_script:
 - $(exit $(go fmt ./... | wc -l))
