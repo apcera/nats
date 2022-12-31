@@ -4741,12 +4741,32 @@ func (m *Msg) RespondMsg(msg *Msg) error {
 	if m.Reply == "" {
 		return ErrMsgNoReply
 	}
-	msg.Subject = m.Reply
 	m.Sub.mu.Lock()
 	nc := m.Sub.conn
 	m.Sub.mu.Unlock()
+
+	// Create new Msg using the headers and payload data
+	// from the one that was passed to RespondMsg().
+	resp := &Msg{
+		Header: msg.Header,
+		Data:   msg.Data,
+	}
+	// Use the reply inbox of the received message as the
+	// subject to respond to the message.
+	resp.Subject = m.Reply
+
+	// Discard the reply inbox unless it is set to be a different one.
+	// This is in order to avoid publishing requests when responding
+	// in case of using RespondMsg as follows:
+	//
+	// m.Data = []byte("response")
+	// m.Respond(m)
+	//
+	if msg.Reply != m.Reply {
+		resp.Reply = msg.Reply
+	}
 	// No need to check the connection here since the call to publish will do all the checking.
-	return nc.PublishMsg(msg)
+	return nc.PublishMsg(resp)
 }
 
 // FIXME: This is a hack

@@ -16,6 +16,7 @@ package test
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -362,5 +363,283 @@ func TestPermViolation(t *testing.T) {
 	// Make sure connection has not been closed
 	if nc.IsClosed() {
 		t.Fatal("Connection should be not be closed")
+	}
+}
+
+func TestCrossAccountRespond(t *testing.T) {
+	conf := createConfFile(t, []byte(`
+                listen: 127.0.0.1:-1
+
+                accounts: {
+                        A: {
+                                users: [ { user: a, password: a,
+                                           permissions = {
+                                             subscribe = ["foo", "bar", "baz", "quux", "_INBOX.>"]
+                                             publish = ["_INBOX.>", "_R_.>"]
+                                           }
+                                         }
+                                       ]
+                                exports [ 
+                                  { service: "foo"  }
+                                  { service: "bar"  }
+                                  { service: "baz" }
+                                  # Multiple responses
+                                  { service: "quux", response: "stream", threshold: "1s" }
+                                ]
+                        },
+                        B: {
+                                users:  [ { user: b, password: b } ]
+                                imports [
+                                   { service: { subject: "foo", account: A } }
+                                   { service: { subject: "bar", account: A } }
+                                   { service: { subject: "baz", account: A } }
+                                   { service: { subject: "quux", account: A } }
+                                ]
+                        },
+                }
+        `))
+	defer os.Remove(conf)
+
+	s, _ := RunServerWithConfig(conf)
+	defer s.Shutdown()
+
+	errCh := make(chan error, 1)
+	ncA, err := nats.Connect(s.ClientURL(), nats.UserInfo("a", "a"), nats.ErrorHandler(func(c *nats.Conn, sub *nats.Subscription, err error) {
+		t.Logf("Connection A: WARN: %s", err)
+		errCh <- err
+	}))
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	defer ncA.Close()
+
+	ncB, err := nats.Connect(s.ClientURL(), nats.UserInfo("b", "b"), nats.ErrorHandler(func(c *nats.Conn, sub *nats.Subscription, err error) {
+		t.Logf("Connection B: WARN: %s", err)
+		errCh <- err
+	}))
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	defer ncB.Close()
+
+	got := ""
+	expect := "ok"
+	t.Run("with NewMsg", func(t *testing.T) {
+		ncA.Subscribe("foo", func(m *nats.Msg) {
+			// NewMsg works with the side effect that it will reset the headers.
+			msg := nats.NewMsg(m.Reply)
+			msg.Data = []byte("ok")
+			msg.Header["X-NATS-Result"] = []string{"ok"}
+			err := m.RespondMsg(msg)
+			if err != nil {
+				errCh <- err
+			}
+		})
+		ncA.Flush()
+
+		msg := nats.NewMsg("foo")
+		msg.Header = nats.Header{
+			"X-NATS-ID": []string{"1"},
+		}
+		msg.Data = []byte("ping")
+		resp, err := ncB.RequestMsg(msg, 2*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = string(resp.Data)
+		if got != expect {
+			t.Errorf("Expected %v, got: %v", expect, got)
+		}
+
+		if len(resp.Header) != 1 {
+			t.Errorf("Expected single header, got: %d", len(resp.Header))
+		}
+		_, ok := resp.Header["X-NATS-Result"]
+		if !ok {
+			t.Error("Missing header in response")
+		}
+	})
+
+	t.Run("single RespondMsg", func(t *testing.T) {
+		ncA.Subscribe("bar", func(m *nats.Msg) {
+			// RespondMsg will keep the original headers of the request.
+			m.Data = []byte("ok")
+			m.Header["X-NATS-Result"] = []string{"ok"}
+			err := m.RespondMsg(m)
+			if err != nil {
+				errCh <- err
+			}
+		})
+		ncA.Flush()
+
+		resp, err := ncB.Request("bar", []byte("ping"), 2*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = string(resp.Data)
+		if got != expect {
+			t.Errorf("Expected %v, got: %v", expect, got)
+		}
+
+		if len(resp.Header) != 2 {
+			t.Errorf("Expected original headers as well, got: %d", len(resp.Header))
+		}
+		_, ok := resp.Header["X-NATS-Result"]
+		if !ok {
+			t.Error("Missing header in response")
+		}
+
+		// Server injects this header.
+		_, ok = resp.Header["Nats-Request-Info"]
+		if !ok {
+			t.Error("Missing header in response")
+		}
+	})
+
+	t.Run("multiple RespondMsg stream", func(t *testing.T) {
+		_, err := ncA.Subscribe("quux", func(m *nats.Msg) {
+			m.Data = []byte("start")
+			m.Header["Task-Progress"] = []string{"0%"}
+			err := m.RespondMsg(m)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			m.Header["Task-Progress"] = []string{"50%"}
+			m.Data = []byte("wip")
+			err = m.RespondMsg(m)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			m.Header["Task-Progress"] = []string{"100%"}
+			m.Data = []byte("done")
+			err = m.RespondMsg(m)
+			if err != nil {
+				errCh <- err
+				return
+			}
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ncA.Flush()
+
+		inbox := nats.NewInbox()
+		responses, err := ncB.SubscribeSync(inbox)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		ncB.Flush()
+		err = ncB.PublishRequest("quux", inbox, []byte("start"))
+		if err != nil {
+			t.Error(err)
+		}
+
+		getNext := func(t *testing.T, sub *nats.Subscription) *nats.Msg {
+			resp, err := sub.NextMsg(2 * time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(resp.Header) != 2 {
+				t.Errorf("Expected original headers as well, got: %d", len(resp.Header))
+			}
+			return resp
+		}
+
+		resp := getNext(t, responses)
+		got = string(resp.Data)
+		expect = "start"
+		if got != expect {
+			t.Errorf("Expected %v, got: %v", expect, got)
+		}
+		v, ok := resp.Header["Task-Progress"]
+		if !ok {
+			t.Error("Missing header in response")
+		}
+		got = v[0]
+		if got != "0%" {
+			t.Errorf("Unexpected value in header, got: %v", got)
+		}
+
+		resp = getNext(t, responses)
+		got = string(resp.Data)
+		expect = "wip"
+		if got != expect {
+			t.Errorf("Expected %v, got: %v", expect, got)
+		}
+		v, ok = resp.Header["Task-Progress"]
+		if !ok {
+			t.Error("Missing header in response")
+		}
+		got = v[0]
+		if got != "50%" {
+			t.Errorf("Unexpected value in header, got: %v", got)
+		}
+
+		resp = getNext(t, responses)
+		got = string(resp.Data)
+		expect = "done"
+		if got != expect {
+			t.Errorf("Expected %v, got: %v", expect, got)
+		}
+		v, ok = resp.Header["Task-Progress"]
+		if !ok {
+			t.Error("Missing header in response")
+		}
+		got = v[0]
+		if got != "100%" {
+			t.Errorf("Unexpected value in header, got: %v", got)
+		}
+	})
+
+	t.Run("RespondMsg different reply", func(t *testing.T) {
+		inbox := nats.NewInbox()
+		sub, err := ncA.SubscribeSync(inbox)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = ncA.Subscribe("baz", func(m *nats.Msg) {
+			// Publish new message with different reply from to sub in Account A.
+			msg := &nats.Msg{
+				Header: m.Header,
+				Data:   []byte("baz"),
+				Reply:  inbox,
+			}
+			err := m.RespondMsg(msg)
+			if err != nil {
+				errCh <- err
+			}
+		})
+		ncA.Flush()
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := ncB.Request("baz", []byte("ping"), 2*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Modify original request data
+		resp.Data = append(resp.Data, '!')
+		resp.RespondMsg(resp)
+		m2, err := sub.NextMsg(2 * time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expect = "baz!"
+		got = string(m2.Data)
+		if got != expect {
+			t.Errorf("Expected %v, got: %v", expect, got)
+		}
+	})
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Error(err)
+		}
+	default:
 	}
 }
