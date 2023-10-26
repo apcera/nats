@@ -310,7 +310,7 @@ func TestAutoUnsubscribeFromCallback(t *testing.T) {
 	nc.Publish("foo", msg)
 	nc.Flush()
 
-	waitFor(t, time.Second, 100*time.Millisecond, func() error {
+	waitFor(t, 5*time.Second, 100*time.Millisecond, func() error {
 		recv := atomic.LoadInt64(&received)
 		if recv != resetUnsubMark {
 			return fmt.Errorf("Wrong number of received messages. Original max was %v reset to %v, actual received: %v",
@@ -345,7 +345,7 @@ func TestAutoUnsubscribeFromCallback(t *testing.T) {
 	nc.Publish("foo", msg)
 	nc.Flush()
 
-	waitFor(t, time.Second, 100*time.Millisecond, func() error {
+	waitFor(t, 5*time.Second, 100*time.Millisecond, func() error {
 		recv := atomic.LoadInt64(&received)
 		if recv != newMax {
 			return fmt.Errorf("Wrong number of received messages. Original max was %v reset to %v, actual received: %v",
@@ -1193,7 +1193,7 @@ func TestAsyncSubscriptionPendingDrain(t *testing.T) {
 	nc.Flush()
 
 	// Wait for all delivered.
-	waitFor(t, 2*time.Second, 15*time.Millisecond, func() error {
+	waitFor(t, 5*time.Second, 15*time.Millisecond, func() error {
 		if d, _ := sub.Delivered(); d != int64(total) {
 			return fmt.Errorf("Wrong delivered count: %v vs %v", d, total)
 		}

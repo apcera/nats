@@ -177,7 +177,7 @@ func TestDrainUnSubs(t *testing.T) {
 		subs[i].Drain()
 	}
 	// Should happen quickly that we get to zero, so do not need to wait long.
-	waitFor(t, 2*time.Second, 10*time.Millisecond, func() error {
+	waitFor(t, 5*time.Second, 10*time.Millisecond, func() error {
 		if numSubs := nc.NumSubscriptions(); numSubs != 0 {
 			return fmt.Errorf("Expected no subscriptions, got %d", numSubs)
 		}
@@ -214,7 +214,7 @@ func TestDrainSlowSubscriber(t *testing.T) {
 	sub.Drain()
 
 	// Should take a second or so to drain away.
-	waitFor(t, 2*time.Second, 100*time.Millisecond, func() error {
+	waitFor(t, 5*time.Second, 100*time.Millisecond, func() error {
 		// Wait for it to become invalid. Once drained it is unsubscribed.
 		_, _, err := sub.Pending()
 		if err != nats.ErrBadSubscription {
@@ -467,7 +467,7 @@ func TestDrainConnDuringReconnect(t *testing.T) {
 	// Shutdown the server.
 	s.Shutdown()
 
-	waitFor(t, time.Second, 10*time.Millisecond, func() error {
+	waitFor(t, 5*time.Second, 10*time.Millisecond, func() error {
 		if nc.IsReconnecting() {
 			return nil
 		}

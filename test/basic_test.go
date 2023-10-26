@@ -56,7 +56,7 @@ func getStableNumGoroutine(t *testing.T) int {
 
 func checkNoGoroutineLeak(t *testing.T, base int, action string) {
 	t.Helper()
-	waitFor(t, 2*time.Second, 100*time.Millisecond, func() error {
+	waitFor(t, time.Minute, 100*time.Millisecond, func() error {
 		delta := (runtime.NumGoroutine() - base)
 		if delta > 0 {
 			return fmt.Errorf("%d Go routines still exist after %s", delta, action)

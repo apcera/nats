@@ -902,11 +902,26 @@ func TestObjectList(t *testing.T) {
 		}
 	})
 
-	t.Run("context timeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
-		defer cancel()
-		_, err := root.List(nats.Context(ctx))
-		expectErr(t, err, context.DeadlineExceeded)
+	t.Run("context canceled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		errs := make(chan error)
+		go func() {
+			for {
+				_, err := root.List(nats.Context(ctx))
+				if err != nil {
+					errs <- err
+				}
+			}
+		}()
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+		select {
+		case err := <-errs:
+			expectErr(t, err, context.Canceled)
+		case <-time.After(5 * time.Second):
+			t.Fatal("Expected error, got none")
+		}
 	})
 }
 
