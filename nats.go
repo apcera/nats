@@ -264,7 +264,6 @@ type InProcessConnProvider interface {
 
 // Options can be used to create a customized connection.
 type Options struct {
-
 	// Url represents a single NATS server url to which the client
 	// will be connecting. If the Servers option is also set, it
 	// then becomes the first server in the Servers array.
@@ -1505,6 +1504,27 @@ func (o Options) Connect() (*Conn, error) {
 		nc.Opts.Secure = true
 	}
 
+	// Check whether secure mode is enabled or not. In case of having
+	// secure mode enabled we need to use tls:// as the protocol schema.
+	// valid prefixes for url are:
+	// - nats://
+	// - tls://
+	// - wss://
+	// - ws://
+	if nc.Opts.Secure {
+		for i := range nc.Opts.Servers {
+			switch {
+			case strings.HasPrefix(nc.Opts.Servers[i], "nats://"):
+				nc.Opts.Servers[i] = strings.Replace(nc.Opts.Servers[i], "nats://", "tls://", 1)
+			case strings.HasPrefix(nc.Opts.Servers[i], "tls://"):
+			case strings.HasPrefix(nc.Opts.Servers[i], "ws://"):
+			case strings.HasPrefix(nc.Opts.Servers[i], "wss://"):
+			default:
+				nc.Opts.Servers[i] = "tls://" + nc.Opts.Servers[i]
+			}
+		}
+	}
+
 	if err := nc.setupServerPool(); err != nil {
 		return nil, err
 	}
@@ -2251,7 +2271,6 @@ func (nc *Conn) setup() {
 
 // Process a connected connection and initialize properly.
 func (nc *Conn) processConnectInit() error {
-
 	// Set our deadline for the whole connect process
 	nc.conn.SetDeadline(time.Now().Add(nc.Opts.Timeout))
 	defer nc.conn.SetDeadline(time.Time{})
@@ -2400,7 +2419,6 @@ func (nc *Conn) checkForSecure() error {
 // processExpectedInfo will look for the expected first INFO message
 // sent when a connection is established. The lock should be held entering.
 func (nc *Conn) processExpectedInfo() error {
-
 	c := &control{}
 
 	// Read the protocol
@@ -2498,8 +2516,10 @@ func (nc *Conn) connectProto() (string, error) {
 
 	// If our server does not support headers then we can't do them or no responders.
 	hdrs := nc.info.Headers
-	cinfo := connectInfo{o.Verbose, o.Pedantic, ujwt, nkey, sig, user, pass, token,
-		o.Secure, o.Name, LangString, Version, clientProtoInfo, !o.NoEcho, hdrs, hdrs}
+	cinfo := connectInfo{
+		o.Verbose, o.Pedantic, ujwt, nkey, sig, user, pass, token,
+		o.Secure, o.Name, LangString, Version, clientProtoInfo, !o.NoEcho, hdrs, hdrs,
+	}
 
 	b, err := json.Marshal(cinfo)
 	if err != nil {
@@ -3109,7 +3129,7 @@ func (nc *Conn) processMsg(data []byte) {
 	// It's possible that we end-up not using the message, but that's ok.
 
 	// FIXME(dlc): Need to copy, should/can do COW?
-	var msgPayload = data
+	msgPayload := data
 	if !nc.ps.msgCopied {
 		msgPayload = make([]byte, len(data))
 		copy(msgPayload, data)
@@ -3793,7 +3813,7 @@ func (nc *Conn) publish(subj, reply string, hdr, data []byte) error {
 	// go 1.14 some values strconv faster, may be able to switch over.
 
 	var b [12]byte
-	var i = len(b)
+	i := len(b)
 
 	if hdr != nil {
 		if len(hdr) > 0 {
@@ -5304,7 +5324,7 @@ func (nc *Conn) IsDraining() bool {
 // caller must lock
 func (nc *Conn) getServers(implicitOnly bool) []string {
 	poolSize := len(nc.srvPool)
-	var servers = make([]string, 0)
+	servers := make([]string, 0)
 	for i := 0; i < poolSize; i++ {
 		if implicitOnly && !nc.srvPool[i].isImplicit {
 			continue
