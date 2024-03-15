@@ -101,6 +101,12 @@ type (
 		// If consumer does not exist, ErrConsumerNotFound is returned.
 		DeleteConsumer(ctx context.Context, consumer string) error
 
+		// PauseConsumer pauses a consumer.
+		PauseConsumer(ctx context.Context, consumer string, pauseUntil time.Time) (*ConsumerPauseResponse, error)
+
+		// ResumeConsumer resumes a consumer.
+		ResumeConsumer(ctx context.Context, consumer string) (*ConsumerPauseResponse, error)
+
 		// ListConsumers returns ConsumerInfoLister enabling iterating over a
 		// channel of consumer infos.
 		ListConsumers(context.Context) ConsumerInfoLister
@@ -161,6 +167,24 @@ type (
 	consumerDeleteResponse struct {
 		apiResponse
 		Success bool `json:"success,omitempty"`
+	}
+
+	consumerPauseRequest struct {
+		PauseUntil *time.Time `json:"pause_until,omitempty"`
+	}
+
+	ConsumerPauseResponse struct {
+		// Paused is true if the consumer is paused.
+		Paused bool `json:"paused"`
+		// PauseUntil is the time until the consumer is paused.
+		PauseUntil time.Time `json:"pause_until"`
+		// PauseRemaining is the time remaining until the consumer is paused.
+		PauseRemaining time.Duration `json:"pause_remaining,omitempty"`
+	}
+
+	consumerPauseApiResponse struct {
+		apiResponse
+		ConsumerPauseResponse
 	}
 
 	// GetMsgOpt is a function setting options for [Stream.GetMsg]
@@ -294,6 +318,16 @@ func (s *stream) Consumer(ctx context.Context, name string) (Consumer, error) {
 // If consumer does not exist, ErrConsumerNotFound is returned.
 func (s *stream) DeleteConsumer(ctx context.Context, name string) error {
 	return deleteConsumer(ctx, s.jetStream, s.name, name)
+}
+
+// PauseConsumer pauses a consumer.
+func (s *stream) PauseConsumer(ctx context.Context, name string, pauseUntil time.Time) (*ConsumerPauseResponse, error) {
+	return pauseConsumer(ctx, s.jetStream, s.name, name, &pauseUntil)
+}
+
+// ResumeConsumer resumes a consumer.
+func (s *stream) ResumeConsumer(ctx context.Context, name string) (*ConsumerPauseResponse, error) {
+	return resumeConsumer(ctx, s.jetStream, s.name, name)
 }
 
 // Info returns StreamInfo from the server.

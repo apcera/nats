@@ -1483,3 +1483,132 @@ func TestPurgeStream(t *testing.T) {
 		})
 	}
 }
+
+func TestPauseConsumer(t *testing.T) {
+	srv := RunBasicJetStreamServer()
+	defer shutdownJSServerAndRemoveStorage(t, srv)
+
+	nc, err := nats.Connect(srv.ClientURL())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	js, err := jetstream.New(nc)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	defer nc.Close()
+
+	s, err := js.CreateStream(context.TODO(), jetstream.StreamConfig{Name: "foo", Subjects: []string{"FOO.*"}})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	t.Run("create a paused consumer", func(t *testing.T) {
+		const consumerName = "durr"
+		pauseUntil := time.Now().Add(1 * time.Minute)
+		consumer, err := s.CreateOrUpdateConsumer(context.TODO(), jetstream.ConsumerConfig{
+			Durable:     consumerName,
+			AckPolicy:   jetstream.AckAllPolicy,
+			Description: "desc",
+			PauseUntil:  &pauseUntil,
+		})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		info, err := consumer.Info(context.TODO())
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if !info.Paused {
+			t.Fatalf("Consumer should be paused")
+		}
+		if info.PauseRemaining <= time.Duration(0) {
+			t.Fatalf("PauseRemaining should be greater than 0")
+		}
+	})
+
+	t.Run("pausing a consumer that does not exists", func(t *testing.T) {
+		const consumerName = "durr1"
+		pauseUntil := time.Now().Add(1 * time.Minute)
+		_, err := s.PauseConsumer(context.TODO(), consumerName, pauseUntil)
+		if err == nil {
+			t.Fatalf("Expected error; got: %v", err)
+		}
+		if !errors.Is(err, jetstream.ErrConsumerNotFound) {
+			t.Fatalf("Expected error: %v; got: %v", jetstream.ErrConsumerNotFound, err)
+		}
+	})
+
+	t.Run("pausing consumer", func(t *testing.T) {
+		const consumerName = "durr2"
+		consumer, err := s.CreateOrUpdateConsumer(context.TODO(), jetstream.ConsumerConfig{
+			Durable:     consumerName,
+			AckPolicy:   jetstream.AckAllPolicy,
+			Description: "desc",
+		})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		info, err := consumer.Info(context.TODO())
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if info.Paused {
+			t.Fatalf("Consumer should not be paused")
+		}
+
+		pauseUntil := time.Now().Add(1 * time.Minute)
+		resp, err := s.PauseConsumer(context.TODO(), consumerName, pauseUntil)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		if !resp.Paused {
+			t.Fatalf("Consumer should be paused")
+		}
+		if !resp.PauseUntil.Equal(pauseUntil) {
+			t.Fatalf("Invalid pause until; want: %v; got: %v", pauseUntil, resp.PauseUntil)
+		}
+		if resp.PauseRemaining <= time.Duration(0) {
+			t.Fatalf("PauseRemaining should be greater than 0")
+		}
+	})
+
+	t.Run("resuming consumer", func(t *testing.T) {
+		const consumerName = "durr3"
+		pauseUntil := time.Now().Add(20 * time.Minute)
+		consumer, err := s.CreateOrUpdateConsumer(context.TODO(), jetstream.ConsumerConfig{
+			Durable:     consumerName,
+			AckPolicy:   jetstream.AckAllPolicy,
+			Description: "desc",
+			PauseUntil:  &pauseUntil,
+		})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		info, err := consumer.Info(context.TODO())
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if !info.Paused {
+			t.Fatalf("Consumer should be paused")
+		}
+
+		resp, err := s.ResumeConsumer(context.TODO(), consumerName)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		if resp.Paused {
+			t.Fatalf("Consumer should not be paused")
+		}
+		if resp.PauseRemaining != time.Duration(0) {
+			t.Fatalf("PauseRemaining should be 0")
+		}
+	})
+}

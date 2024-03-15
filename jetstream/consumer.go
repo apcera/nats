@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/nats-io/nats.go/internal/syncx"
 	"github.com/nats-io/nuid"
@@ -319,6 +320,43 @@ func deleteConsumer(ctx context.Context, js *jetStream, stream, consumer string)
 		return resp.Error
 	}
 	return nil
+}
+
+func pauseConsumer(ctx context.Context, js *jetStream, stream, consumer string, pauseUntil *time.Time) (*ConsumerPauseResponse, error) {
+	ctx, cancel := wrapContextWithoutDeadline(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+	if err := validateConsumerName(consumer); err != nil {
+		return nil, err
+	}
+	subject := apiSubj(js.apiPrefix, fmt.Sprintf(apiConsumerPauseT, stream, consumer))
+
+	var resp consumerPauseApiResponse
+	req, err := json.Marshal(consumerPauseRequest{
+		PauseUntil: pauseUntil,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := js.apiRequestJSON(ctx, subject, &resp, req); err != nil {
+		return nil, err
+	}
+	if resp.Error != nil {
+		if resp.Error.ErrorCode == JSErrCodeConsumerNotFound {
+			return nil, ErrConsumerNotFound
+		}
+		return nil, resp.Error
+	}
+	return &ConsumerPauseResponse{
+		Paused:         resp.Paused,
+		PauseUntil:     resp.PauseUntil,
+		PauseRemaining: resp.PauseRemaining,
+	}, nil
+}
+
+func resumeConsumer(ctx context.Context, js *jetStream, stream, consumer string) (*ConsumerPauseResponse, error) {
+	return pauseConsumer(ctx, js, stream, consumer, nil)
 }
 
 func validateConsumerName(dur string) error {

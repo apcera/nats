@@ -197,6 +197,12 @@ type (
 		// DeleteConsumer removes a consumer with given name from a stream.
 		// If consumer does not exist, ErrConsumerNotFound is returned.
 		DeleteConsumer(ctx context.Context, stream string, consumer string) error
+
+		// PauseConsumer pauses a consumer until the given time.
+		PauseConsumer(ctx context.Context, stream string, consumer string, pauseUntil time.Time) (*ConsumerPauseResponse, error)
+
+		// ResumeConsumer resumes a paused consumer.
+		ResumeConsumer(ctx context.Context, stream string, consumer string) (*ConsumerPauseResponse, error)
 	}
 
 	// StreamListOpt is a functional option for [StreamManager.ListStreams] and
@@ -780,6 +786,20 @@ func (js *jetStream) DeleteConsumer(ctx context.Context, stream string, name str
 		return err
 	}
 	return deleteConsumer(ctx, js, stream, name)
+}
+
+func (js *jetStream) PauseConsumer(ctx context.Context, stream string, consumer string, pauseUntil time.Time) (*ConsumerPauseResponse, error) {
+	if err := validateStreamName(stream); err != nil {
+		return nil, err
+	}
+	return pauseConsumer(ctx, js, stream, consumer, &pauseUntil)
+}
+
+func (js *jetStream) ResumeConsumer(ctx context.Context, stream string, consumer string) (*ConsumerPauseResponse, error) {
+	if err := validateStreamName(stream); err != nil {
+		return nil, err
+	}
+	return resumeConsumer(ctx, js, stream, consumer)
 }
 
 func validateStreamName(stream string) error {

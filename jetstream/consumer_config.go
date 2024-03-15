@@ -75,6 +75,13 @@ type (
 
 		// TimeStamp indicates when the info was gathered by the server.
 		TimeStamp time.Time `json:"ts"`
+
+		// Paused indicates whether the consumer is paused.
+		Paused bool `json:"paused,omitempty"`
+
+		// PauseRemaining contains the amount of time left until the consumer
+		// unpauses. It will only be non-zero if the consumer is currently paused.
+		PauseRemaining time.Duration `json:"pause_remaining,omitempty"`
 	}
 
 	// ConsumerConfig is the configuration of a JetStream consumer.
@@ -217,6 +224,9 @@ type (
 		// associating metadata on the consumer. This feature requires
 		// nats-server v2.10.0 or later.
 		Metadata map[string]string `json:"metadata,omitempty"`
+
+		// PauseUntil is for suspending the consumer until the deadline.
+		PauseUntil *time.Time `json:"pause_until,omitempty"`
 	}
 
 	// OrderedConsumerConfig is the configuration of an ordered JetStream
