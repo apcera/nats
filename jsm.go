@@ -1076,6 +1076,13 @@ type StreamState struct {
 	NumDeleted  int               `json:"num_deleted"`
 	NumSubjects uint64            `json:"num_subjects"`
 	Subjects    map[string]uint64 `json:"subjects"`
+	Lost        *LostStreamData   `json:"lost,omitempty"`
+}
+
+// LostStreamData indicates msgs that have been damaged or unrecoverable.
+type LostStreamData struct {
+	Msgs  []uint64 `json:"msgs"`
+	Bytes uint64   `json:"bytes"`
 }
 
 // ClusterInfo shows information about the underlying set of servers
