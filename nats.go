@@ -4989,8 +4989,8 @@ func (s *Subscription) ClearMaxPending() error {
 
 // Pending Limits
 const (
-	// DefaultSubPendingMsgsLimit will be 512k msgs.
-	DefaultSubPendingMsgsLimit = 512 * 1024
+	// DefaultSubPendingMsgsLimit will be 500k msgs.
+	DefaultSubPendingMsgsLimit = 500_000
 	// DefaultSubPendingBytesLimit is 64MB
 	DefaultSubPendingBytesLimit = 64 * 1024 * 1024
 )
