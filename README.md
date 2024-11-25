@@ -261,6 +261,7 @@ nc.QueueSubscribe("foo", "job_workers", func(_ *Msg) {
 // the connection in reconnecting state if it failed to connect right away.
 nc, err := nats.Connect(nats.DefaultURL,
     nats.RetryOnFailedConnect(true),
+    nats.PingInterval(time.Second),
     nats.MaxReconnects(10),
     nats.ReconnectWait(time.Second),
     nats.ReconnectHandler(func(_ *nats.Conn) {
