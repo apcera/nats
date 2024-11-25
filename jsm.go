@@ -1089,11 +1089,12 @@ type ClusterInfo struct {
 // PeerInfo shows information about all the peers in the cluster that
 // are supporting the stream or consumer.
 type PeerInfo struct {
-	Name    string        `json:"name"`
-	Current bool          `json:"current"`
-	Offline bool          `json:"offline,omitempty"`
-	Active  time.Duration `json:"active"`
-	Lag     uint64        `json:"lag,omitempty"`
+	Name     string        `json:"name"`
+	Current  bool          `json:"current"`
+	Observer bool          `json:"observer,omitempty"`
+	Offline  bool          `json:"offline,omitempty"`
+	Active   time.Duration `json:"active"`
+	Lag      uint64        `json:"lag,omitempty"`
 }
 
 // UpdateStream updates a Stream.
