@@ -41,11 +41,12 @@ type (
 	PublishOpt func(*pubOpts) error
 
 	pubOpts struct {
-		id             string
-		lastMsgID      string  // Expected last msgId
-		stream         string  // Expected stream name
-		lastSeq        *uint64 // Expected last sequence
-		lastSubjectSeq *uint64 // Expected last sequence per subject
+		id                    string
+		lastMsgID             string  // Expected last msgId
+		stream                string  // Expected stream name
+		lastSeq               *uint64 // Expected last sequence
+		lastSubjectSeq        *uint64 // Expected last sequence per subject
+		lastSubjectSeqSubject string  // Expected last sequence per subject for this subject
 
 		// Publish retries for NoResponders err.
 		retryWait     time.Duration // Retry wait between attempts
@@ -191,6 +192,9 @@ func (js *jetStream) PublishMsg(ctx context.Context, m *nats.Msg, opts ...Publis
 	if o.lastSubjectSeq != nil {
 		m.Header.Set(ExpectedLastSubjSeqHeader, strconv.FormatUint(*o.lastSubjectSeq, 10))
 	}
+	if o.lastSubjectSeqSubject != "" {
+		m.Header.Set(ExpectedLastSubjSeqSubjHeader, o.lastSubjectSeqSubject)
+	}
 
 	var resp *nats.Msg
 	var err error
@@ -273,6 +277,9 @@ func (js *jetStream) PublishMsgAsync(m *nats.Msg, opts ...PublishOpt) (PubAckFut
 	}
 	if o.lastSubjectSeq != nil {
 		m.Header.Set(ExpectedLastSubjSeqHeader, strconv.FormatUint(*o.lastSubjectSeq, 10))
+	}
+	if o.lastSubjectSeqSubject != "" {
+		m.Header.Set(ExpectedLastSubjSeqSubjHeader, o.lastSubjectSeqSubject)
 	}
 
 	paf := o.pafRetry

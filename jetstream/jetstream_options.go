@@ -360,6 +360,17 @@ func WithExpectLastSequencePerSubject(seq uint64) PublishOpt {
 	}
 }
 
+// WithExpectLastSequencePerSubjectForSubject sets the subject to use when
+// ExpectLastSequencePerSubject is set. If the last message for the specified
+// subject has a different sequence number server will reject the message and
+// publish will fail.
+func WithExpectLastSequencePerSubjectForSubject(subj string) PublishOpt {
+	return func(opts *pubOpts) error {
+		opts.lastSubjectSeqSubject = subj
+		return nil
+	}
+}
+
 // WithExpectLastMsgID sets the expected message ID the last message on a stream
 // should have. If the last message has a different message ID server will
 // reject the message and publish will fail.

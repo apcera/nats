@@ -323,6 +323,105 @@ func TestPublishMsg(t *testing.T) {
 			},
 		},
 		{
+			name: "expect last sequence per subject for subject",
+			msgs: []publishConfig{
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 1"),
+						Subject: "FOO.1",
+					},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 1,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 2"),
+						Subject: "FOO.2",
+					},
+					opts: []jetstream.PublishOpt{},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 2,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 3"),
+						Subject: "FOO.1",
+					},
+					opts: []jetstream.PublishOpt{
+						jetstream.WithExpectLastSequencePerSubject(1),
+						jetstream.WithExpectLastSequencePerSubjectForSubject("FOO.1"),
+					},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 3,
+					},
+					expectedHeaders: nats.Header{
+						"Nats-Expected-Last-Subject-Sequence":         []string{"1"},
+						"Nats-Expected-Last-Subject-Sequence-Subject": []string{"FOO.1"},
+					},
+				},
+			},
+		},
+		{
+			name: "last sequence per subject for different subject",
+			msgs: []publishConfig{
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 1"),
+						Subject: "FOO.1.bar",
+					},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 1,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 2"),
+						Subject: "FOO.1.baz",
+					},
+					opts: []jetstream.PublishOpt{},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 2,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 3"),
+						Subject: "FOO.2.baz",
+					},
+					opts: []jetstream.PublishOpt{},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 3,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 4"),
+						Subject: "FOO.1.bax",
+					},
+					opts: []jetstream.PublishOpt{
+						jetstream.WithExpectLastSequencePerSubject(2),
+						jetstream.WithExpectLastSequencePerSubjectForSubject("FOO.1.*"),
+					},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 4,
+					},
+					expectedHeaders: nats.Header{
+						"Nats-Expected-Last-Subject-Sequence":         []string{"2"},
+						"Nats-Expected-Last-Subject-Sequence-Subject": []string{"FOO.1.*"},
+					},
+				},
+			},
+		},
+		{
 			name: "invalid last sequence per subject",
 			msgs: []publishConfig{
 				{
@@ -352,6 +451,107 @@ func TestPublishMsg(t *testing.T) {
 						Subject: "FOO.1",
 					},
 					opts: []jetstream.PublishOpt{jetstream.WithExpectLastSequencePerSubject(123)},
+					withError: func(t *testing.T, err error) {
+						var apiErr *jetstream.APIError
+						if ok := errors.As(err, &apiErr); !ok {
+							t.Fatalf("Expected API error; got: %v", err)
+						}
+						if apiErr.ErrorCode != 10071 {
+							t.Fatalf("Expected error code: 10071; got: %d", apiErr.ErrorCode)
+						}
+					},
+				},
+			},
+		},
+		{
+			name: "invalid last sequence per subject for subject",
+			msgs: []publishConfig{
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 1"),
+						Subject: "FOO.1",
+					},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 1,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 2"),
+						Subject: "FOO.2",
+					},
+					opts: []jetstream.PublishOpt{},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 2,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 3"),
+						Subject: "FOO.1",
+					},
+					opts: []jetstream.PublishOpt{
+						jetstream.WithExpectLastSequencePerSubject(123),
+						jetstream.WithExpectLastSequencePerSubjectForSubject("FOO.1"),
+					},
+					withError: func(t *testing.T, err error) {
+						var apiErr *jetstream.APIError
+						if ok := errors.As(err, &apiErr); !ok {
+							t.Fatalf("Expected API error; got: %v", err)
+						}
+						if apiErr.ErrorCode != 10071 {
+							t.Fatalf("Expected error code: 10071; got: %d", apiErr.ErrorCode)
+						}
+					},
+				},
+			},
+		},
+		{
+			name: "invalid last sequence per subject for different subject",
+			msgs: []publishConfig{
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 1"),
+						Subject: "FOO.1.bar",
+					},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 1,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 2"),
+						Subject: "FOO.1.baz",
+					},
+					opts: []jetstream.PublishOpt{},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 2,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 3"),
+						Subject: "FOO.2.baz",
+					},
+					opts: []jetstream.PublishOpt{},
+					expectedAck: jetstream.PubAck{
+						Stream:   "foo",
+						Sequence: 3,
+					},
+				},
+				{
+					msg: &nats.Msg{
+						Data:    []byte("msg 4"),
+						Subject: "FOO.1.bax",
+					},
+					opts: []jetstream.PublishOpt{
+						jetstream.WithExpectLastSequencePerSubject(123),
+						jetstream.WithExpectLastSequencePerSubjectForSubject("FOO.1.*"),
+					},
 					withError: func(t *testing.T, err error) {
 						var apiErr *jetstream.APIError
 						if ok := errors.As(err, &apiErr); !ok {
@@ -548,7 +748,7 @@ func TestPublishMsg(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_, err = js.CreateStream(ctx, jetstream.StreamConfig{Name: "foo", Subjects: []string{"FOO.*"}, MaxMsgSize: 64})
+			_, err = js.CreateStream(ctx, jetstream.StreamConfig{Name: "foo", Subjects: []string{"FOO.>"}, MaxMsgSize: 128})
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
