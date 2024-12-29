@@ -31,6 +31,9 @@ type JetStreamManager interface {
 	// UpdateStream updates a stream.
 	UpdateStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error)
 
+	// UpsertStream creates or updates a stream.
+	UpsertStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error)
+
 	// DeleteStream deletes a stream.
 	DeleteStream(name string, opts ...JSOpt) error
 
@@ -1150,6 +1153,15 @@ func (js *js) UpdateStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error
 	}
 
 	return resp.StreamInfo, nil
+}
+
+// UpsertStream creates or updates a Stream.
+func (js *js) UpsertStream(cfg *StreamConfig, opts ...JSOpt) (*StreamInfo, error) {
+	info, err := js.AddStream(cfg, opts...)
+	if errors.Is(err, ErrStreamNameAlreadyInUse) {
+		return js.UpdateStream(cfg, opts...)
+	}
+	return info, err
 }
 
 // streamDeleteResponse is the response for a Stream delete request.
