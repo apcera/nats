@@ -544,7 +544,7 @@ func (js *jetStream) CreateStream(ctx context.Context, cfg StreamConfig) (Stream
 		}
 		for i := range cfg.Sources {
 			if len(cfg.Sources[i].SubjectTransforms) != 0 && len(resp.Sources[i].SubjectTransforms) == 0 {
-				return nil, ErrStreamSourceMultipleFilterSubjectsNotSupported
+				return nil, ErrStreamSubjectTransformNotSupported
 			}
 		}
 	}
