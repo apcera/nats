@@ -329,7 +329,7 @@ var (
 	ErrBadBucket              = errors.New("nats: bucket not valid key-value store")
 	ErrKeyNotFound            = errors.New("nats: key not found")
 	ErrKeyDeleted             = errors.New("nats: key was deleted")
-	ErrHistoryToLarge         = errors.New("nats: history limited to a max of 64")
+	ErrHistoryTooLarge        = errors.New("nats: history limited to a max of 64")
 	ErrNoKeysFound            = errors.New("nats: no keys found")
 )
 
@@ -397,7 +397,7 @@ func (js *js) CreateKeyValue(cfg *KeyValueConfig) (KeyValue, error) {
 	history := int64(1)
 	if cfg.History > 0 {
 		if cfg.History > KeyValueMaxHistory {
-			return nil, ErrHistoryToLarge
+			return nil, ErrHistoryTooLarge
 		}
 		history = int64(cfg.History)
 	}
