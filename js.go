@@ -576,7 +576,7 @@ func (js *js) PublishMsg(m *Msg, opts ...PubOpt) (*PubAck, error) {
 	}
 
 	if err != nil {
-		for r, ttl := 0, o.ttl; errors.Is(err, ErrNoResponders) && (r < o.rnum || o.rnum < 0); r++ {
+		for r := 0; errors.Is(err, ErrNoResponders) && (r < o.rnum || o.rnum < 0); r++ {
 			// To protect against small blips in leadership changes etc, if we get a no responders here retry.
 			if o.ctx != nil {
 				select {
@@ -586,13 +586,8 @@ func (js *js) PublishMsg(m *Msg, opts ...PubOpt) (*PubAck, error) {
 			} else {
 				time.Sleep(o.rwait)
 			}
-			if o.ttl > 0 {
-				ttl -= o.rwait
-				if ttl <= 0 {
-					err = ErrTimeout
-					break
-				}
-				resp, err = js.nc.RequestMsg(m, time.Duration(ttl))
+			if o.rnum > 0 {
+				resp, err = js.nc.RequestMsg(m, time.Duration(o.ttl))
 			} else {
 				resp, err = js.nc.RequestMsgWithContext(o.ctx, m)
 			}
