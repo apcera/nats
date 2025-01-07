@@ -1,4 +1,4 @@
-// Copyright 2023-2024 The NATS Authors
+// Copyright 2023-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -1680,6 +1680,8 @@ func TestKeyValueCreate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error getting stream: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	stream.CachedInfo().Config.Metadata = nil
 	if !reflect.DeepEqual(stream.CachedInfo().Config, expectedStreamConfig) {
 		t.Fatalf("Expected stream config to be %+v, got %+v", expectedStreamConfig, stream.CachedInfo().Config)
 	}

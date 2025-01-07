@@ -1,4 +1,4 @@
-// Copyright 2020-2024 The NATS Authors
+// Copyright 2020-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -2289,7 +2289,7 @@ func TestJetStreamManagement(t *testing.T) {
 		if si == nil || si.Config.Name != "foo" {
 			t.Fatalf("StreamInfo is not correct %+v", si)
 		}
-		if !reflect.DeepEqual(si.Config.Metadata, map[string]string{"foo": "bar", "baz": "quux"}) {
+		if v1, v2 := si.Config.Metadata["foo"], si.Config.Metadata["baz"]; v1 != "bar" || v2 != "quux" {
 			t.Fatalf("Metadata is not correct %+v", si.Config.Metadata)
 		}
 		if si.Config.Compression != nats.S2Compression {
@@ -2406,7 +2406,7 @@ func TestJetStreamManagement(t *testing.T) {
 			if ci == nil || ci.Name != "dlc" || ci.Stream != "foo" {
 				t.Fatalf("ConsumerInfo is not correct %+v", ci)
 			}
-			if !reflect.DeepEqual(ci.Config.Metadata, map[string]string{"foo": "bar", "baz": "quux"}) {
+			if v1, v2 := ci.Config.Metadata["foo"], ci.Config.Metadata["baz"]; v1 != "bar" || v2 != "quux" {
 				t.Fatalf("Metadata is not correct %+v", ci.Config.Metadata)
 			}
 		})
@@ -2955,15 +2955,14 @@ func TestStreamConfigMatches(t *testing.T) {
 			InactiveThreshold: 10 * time.Second,
 			MaxAckPending:     500,
 		},
-		Metadata: map[string]string{
-			"foo": "bar",
-		},
 	}
 
 	s, err := js.AddStream(&cfg)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	s.Config.Metadata = nil
 	if !reflect.DeepEqual(s.Config, cfg) {
 		t.Fatalf("StreamConfig doesn't match: %#v", s.Config)
 	}
@@ -2993,6 +2992,8 @@ func TestStreamConfigMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	s.Config.Metadata = nil
 	if !reflect.DeepEqual(s.Config, cfgMirror) {
 		t.Fatalf("StreamConfig doesn't match: %#v", s.Config)
 	}
@@ -3024,6 +3025,8 @@ func TestStreamConfigMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	s.Config.Metadata = nil
 	if !reflect.DeepEqual(s.Config, cfgSourcing) {
 		t.Fatalf("StreamConfig doesn't match: %#v", s.Config)
 	}
