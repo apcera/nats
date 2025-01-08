@@ -606,14 +606,14 @@ func (js *js) PublishMsg(m *Msg, opts ...PubOpt) (*PubAck, error) {
 	}
 
 	var pa pubAckResponse
-	if err := json.Unmarshal(resp.Data, &pa); err != nil {
-		return nil, ErrInvalidJSAck
+	if err = json.Unmarshal(resp.Data, &pa); err != nil {
+		return nil, wrapError(ErrInvalidJSAck, err.Error())
 	}
 	if pa.Error != nil {
 		return nil, pa.Error
 	}
 	if pa.PubAck == nil || pa.PubAck.Stream == _EMPTY_ {
-		return nil, ErrInvalidJSAck
+		return nil, wrapError(ErrInvalidJSAck, "missing stream or sequence")
 	}
 	return pa.PubAck, nil
 }
@@ -3801,7 +3801,7 @@ const (
 	// DiscardOld will remove older messages to return to the limits. This is
 	// the default.
 	DiscardOld DiscardPolicy = iota
-	//DiscardNew will fail to store new messages.
+	// DiscardNew will fail to store new messages.
 	DiscardNew
 )
 

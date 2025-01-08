@@ -246,3 +246,11 @@ func (err *jsError) Unwrap() error {
 	}
 	return err.apiErr
 }
+
+func wrapError(err error, message string) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%w: %s", err, message)
+}
