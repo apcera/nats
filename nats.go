@@ -3789,6 +3789,17 @@ func (h Header) Get(key string) string {
 	return _EMPTY_
 }
 
+// Returns the list of keys in the message header
+func (h Header) Keys() []string {
+	keys := make([]string, len(h))
+	i := 0
+	for k := range h {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
 // Values returns all values associated with the given key.
 // It is case-sensitive.
 func (h Header) Values(key string) []string {

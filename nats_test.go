@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -1596,6 +1597,25 @@ func TestHeaderParser(t *testing.T) {
 	checkStatus("NATS/1.0 503", 503, "")
 	checkStatus("NATS/1.0 503 No Responders", 503, "No Responders")
 	checkStatus("NATS/1.0  404   No Messages", 404, "No Messages")
+}
+
+func TestHeaderKeys(t *testing.T) {
+	m := NewMsg("testing")
+	m.Header = Header{
+		"field1": []string{"a"},
+		"field2": []string{"b"},
+	}
+	actualKeys := m.Header.Keys()
+	if !slices.Contains(actualKeys, "field1") ||
+		!slices.Contains(actualKeys, "field2") {
+		t.Fatalf("Keys did not return expected list: %+v", actualKeys)
+	}
+
+	m.Header = Header{}
+	emptyKeys := m.Header.Keys()
+	if len(emptyKeys) > 0 {
+		t.Fatal("Empty header should've returned empty keys list")
+	}
 }
 
 func TestHeaderMultiLine(t *testing.T) {
