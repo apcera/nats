@@ -1,4 +1,4 @@
-// Copyright 2022-2024 The NATS Authors
+// Copyright 2022-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -301,8 +301,10 @@ func TestCreateStream(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
-			if !reflect.DeepEqual(s.CachedInfo().Config.Metadata, test.metadata) {
-				t.Fatalf("Invalid metadata; want: %v, got: %v", test.metadata, s.CachedInfo().Config.Metadata)
+			for k, v := range test.metadata {
+				if s.CachedInfo().Config.Metadata[k] != v {
+					t.Fatalf("Invalid metadata; want: %v, got: %v", test.metadata, s.CachedInfo().Config.Metadata)
+				}
 			}
 		})
 	}
@@ -692,8 +694,10 @@ func TestUpdateStream(t *testing.T) {
 			if len(info.Config.Subjects) != 1 || info.Config.Subjects[0] != test.subject {
 				t.Fatalf("Invalid stream subjects after update: %v", info.Config.Subjects)
 			}
-			if !reflect.DeepEqual(info.Config.Metadata, test.metadata) {
-				t.Fatalf("Invalid metadata; want: %v, got: %v", test.metadata, info.Config.Metadata)
+			for k, v := range test.metadata {
+				if info.Config.Metadata[k] != v {
+					t.Fatalf("Invalid metadata; want: %v, got: %v", test.metadata, info.Config.Metadata)
+				}
 			}
 		})
 	}
@@ -1834,15 +1838,14 @@ func TestStreamConfigMatches(t *testing.T) {
 			InactiveThreshold: 10 * time.Second,
 			MaxAckPending:     500,
 		},
-		Metadata: map[string]string{
-			"foo": "bar",
-		},
 	}
 
 	s, err := js.CreateStream(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	s.CachedInfo().Config.Metadata = nil
 	if !reflect.DeepEqual(s.CachedInfo().Config, cfg) {
 		t.Fatalf("StreamConfig doesn't match: %#v", s.CachedInfo().Config)
 	}
@@ -1872,6 +1875,8 @@ func TestStreamConfigMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	s.CachedInfo().Config.Metadata = nil
 	if !reflect.DeepEqual(s.CachedInfo().Config, cfgMirror) {
 		t.Fatalf("StreamConfig doesn't match: %#v", s.CachedInfo().Config)
 	}
@@ -1903,6 +1908,8 @@ func TestStreamConfigMatches(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	s.CachedInfo().Config.Metadata = nil
 	if !reflect.DeepEqual(s.CachedInfo().Config, cfgSourcing) {
 		t.Fatalf("StreamConfig doesn't match: %#v", s.CachedInfo().Config)
 	}
@@ -1950,15 +1957,14 @@ func TestConsumerConfigMatches(t *testing.T) {
 		Replicas:           1,
 		MemoryStorage:      true,
 		FilterSubjects:     []string{"foo.1", "foo.2"},
-		Metadata: map[string]string{
-			"foo": "bar",
-		},
 	}
 
 	c, err := s.CreateConsumer(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	// server will set metadata values, so we need to clear them
+	c.CachedInfo().Config.Metadata = nil
 	if !reflect.DeepEqual(c.CachedInfo().Config, cfg) {
 		t.Fatalf("ConsumerConfig doesn't match")
 	}

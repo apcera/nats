@@ -1,4 +1,4 @@
-// Copyright 2019-2023 The NATS Authors
+// Copyright 2019-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -736,7 +736,14 @@ func TestNoRaceJetStreamChanSubscribeStall(t *testing.T) {
 	toSend := 100_000
 	for i := 0; i < toSend; i++ {
 		// Use plain NATS here for speed.
-		nc.Publish("STALL", msg)
+		if _, err := js.PublishAsync("STALL", msg); err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+	}
+	select {
+	case <-js.PublishAsyncComplete():
+	case <-time.After(5 * time.Second):
+		t.Fatalf("Timeout waiting for messages")
 	}
 	nc.Flush()
 

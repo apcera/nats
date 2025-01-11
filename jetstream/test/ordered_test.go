@@ -1,4 +1,4 @@
-// Copyright 2022-2023 The NATS Authors
+// Copyright 2022-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -2109,6 +2109,14 @@ func TestOrderedConsumerConfig(t *testing.T) {
 			cfg := c.CachedInfo().Config
 			test.expected.Name = cfg.Name
 
+			if test.config.Metadata != nil {
+				for k, v := range test.config.Metadata {
+					if cfg.Metadata[k] != v {
+						t.Fatalf("Expected config %+v, got %+v", test.expected, cfg)
+					}
+				}
+			}
+			test.expected.Metadata = cfg.Metadata
 			if !reflect.DeepEqual(test.expected, cfg) {
 				t.Fatalf("Expected config %+v, got %+v", test.expected, cfg)
 			}

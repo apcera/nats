@@ -120,6 +120,7 @@ type JetStream interface {
 	// PullSubscribe creates a Subscription that can fetch messages.
 	// See important note in Subscribe(). Additionally, for an ephemeral pull consumer, the "durable" value must be
 	// set to an empty string.
+	// When using PullSubscribe, the messages are fetched using Fetch() and FetchBatch() methods.
 	PullSubscribe(subj, durable string, opts ...SubOpt) (*Subscription, error)
 }
 
