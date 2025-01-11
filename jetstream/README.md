@@ -3,38 +3,37 @@
 
 This doc covers the basic usage of the `jetstream` package in `nats.go` client.
 
-- [JetStream Simplified Client](#jetstream-simplified-client)
-  - [Overview](#overview)
-  - [Basic usage](#basic-usage)
-  - [Streams](#streams)
-    - [Stream management (CRUD)](#stream-management-crud)
-    - [Listing streams and stream names](#listing-streams-and-stream-names)
-    - [Stream-specific operations](#stream-specific-operations)
-  - [Consumers](#consumers)
-    - [Consumers management](#consumers-management)
-    - [Listing consumers and consumer
-      names](#listing-consumers-and-consumer-names)
-    - [Ordered consumers](#ordered-consumers)
-    - [Receiving messages from the
-      consumer](#receiving-messages-from-the-consumer)
-      - [Single fetch](#single-fetch)
-      - [Continuous polling](#continuous-polling)
-        - [Using `Consume()` receive messages in a
-          callback](#using-consume-receive-messages-in-a-callback)
-        - [Using `Messages()` to iterate over incoming
-          messages](#using-messages-to-iterate-over-incoming-messages)
-  - [Publishing on stream](#publishing-on-stream)
-    - [Synchronous publish](#synchronous-publish)
-    - [Async publish](#async-publish)
-  - [KeyValue Store](#keyvalue-store)
-    - [Basic usage of KV bucket](#basic-usage-of-kv-bucket)
-    - [Watching for changes on a bucket](#watching-for-changes-on-a-bucket)
-    - [Additional operations on a bucket](#additional-operations-on-a-bucket)
-  - [Object Store](#object-store)
-    - [Basic usage of Object Store](#basic-usage-of-object-store)
-    - [Watching for changes on a store](#watching-for-changes-on-a-store)
-    - [Additional operations on a store](#additional-operations-on-a-store)
-  - [Examples](#examples)
+- [Overview](#overview)
+- [Basic usage](#basic-usage)
+- [Streams](#streams)
+- [Stream management (CRUD)](#stream-management-crud)
+- [Listing streams and stream names](#listing-streams-and-stream-names)
+- [Stream-specific operations](#stream-specific-operations)
+- [Consumers](#consumers)
+- [Consumers management](#consumers-management)
+- [Listing consumers and consumer
+    names](#listing-consumers-and-consumer-names)
+- [Ordered consumers](#ordered-consumers)
+- [Receiving messages from the
+    consumer](#receiving-messages-from-the-consumer)
+  - [Single fetch](#single-fetch)
+  - [Continuous polling](#continuous-polling)
+  - [Using `Consume()` receive messages in a
+        callback](#using-consume-receive-messages-in-a-callback)
+  - [Using `Messages()` to iterate over incoming
+        messages](#using-messages-to-iterate-over-incoming-messages)
+- [Publishing on stream](#publishing-on-stream)
+- [Synchronous publish](#synchronous-publish)
+- [Async publish](#async-publish)
+- [KeyValue Store](#keyvalue-store)
+- [Basic usage of KV bucket](#basic-usage-of-kv-bucket)
+- [Watching for changes on a bucket](#watching-for-changes-on-a-bucket)
+- [Additional operations on a bucket](#additional-operations-on-a-bucket)
+- [Object Store](#object-store)
+- [Basic usage of Object Store](#basic-usage-of-object-store)
+- [Watching for changes on a store](#watching-for-changes-on-a-store)
+- [Additional operations on a store](#additional-operations-on-a-store)
+- [Examples](#examples)
 
 ## Overview
 
@@ -118,15 +117,15 @@ func main() {
     if err != nil {
         // handle error
     }
-	
+
     for msg := range msgs.Messages() {
         msg.Ack()
         fmt.Printf("Received a JetStream message via fetch: %s\n", string(msg.Data()))
         messageCounter++
     }
-	
+
     fmt.Printf("received %d messages\n", messageCounter)
-	
+
     if msgs.Error() != nil {
         fmt.Println("Error during Fetch(): ", msgs.Error())
     }
@@ -400,7 +399,7 @@ of messages/bytes. By default, `Fetch()` will wait 30 seconds before timing out
 // receive up to 10 messages from the stream
 msgs, err := c.Fetch(10)
 if err != nil {
-	// handle error
+    // handle error
 }
 
 for msg := range msgs.Messages() {

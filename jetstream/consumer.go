@@ -63,7 +63,9 @@ type (
 		// for delivered messages.
 		//
 		// Messages channel is always closed, thus it is safe to range over it
-		// without additional checks.
+		// without additional checks. After the channel is closed,
+		// MessageBatch.Error() should be checked to see if there was an error
+		// during message delivery (e.g. missing heartbeat).
 		Fetch(batch int, opts ...FetchOpt) (MessageBatch, error)
 
 		// FetchBytes is used to retrieve up to a provided bytes from the
@@ -82,7 +84,9 @@ type (
 		// for delivered messages.
 		//
 		// Messages channel is always closed, thus it is safe to range over it
-		// without additional checks.
+		// without additional checks. After the channel is closed,
+		// MessageBatch.Error() should be checked to see if there was an error
+		// during message delivery (e.g. missing heartbeat).
 		FetchBytes(maxBytes int, opts ...FetchOpt) (MessageBatch, error)
 
 		// FetchNoWait is used to retrieve up to a provided number of messages
@@ -94,7 +98,9 @@ type (
 		// channel for delivered messages.
 		//
 		// Messages channel is always closed, thus it is safe to range over it
-		// without additional checks.
+		// without additional checks. After the channel is closed,
+		// MessageBatch.Error() should be checked to see if there was an error
+		// during message delivery (e.g. missing heartbeat).
 		FetchNoWait(batch int) (MessageBatch, error)
 
 		// Consume will continuously receive messages and handle them

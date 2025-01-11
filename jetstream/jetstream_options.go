@@ -1,4 +1,4 @@
-// Copyright 2022-2024 The NATS Authors
+// Copyright 2022-2025 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -104,6 +104,9 @@ func WithGetMsgSubject(subject string) GetMsgOpt {
 // PullMaxMessages limits the number of messages to be buffered in the client.
 // If not provided, a default of 500 messages will be used.
 // This option is exclusive with PullMaxBytes.
+//
+// PullMaxMessages implements PullConsumeOpt and PullMessagesOpt and thus can
+// be used to configure both Consumer.Consume and Consumer.Messages.
 type PullMaxMessages int
 
 func (max PullMaxMessages) configureConsume(opts *consumeOpts) error {
@@ -125,6 +128,9 @@ func (max PullMaxMessages) configureMessages(opts *consumeOpts) error {
 // PullExpiry sets timeout on a single pull request, waiting until at least one
 // message is available.
 // If not provided, a default of 30 seconds will be used.
+//
+// PullExpiry implements PullConsumeOpt and PullMessagesOpt and thus can
+// be used to configure both Consumer.Consume and Consumer.Messages.
 type PullExpiry time.Duration
 
 func (exp PullExpiry) configureConsume(opts *consumeOpts) error {
@@ -148,6 +154,9 @@ func (exp PullExpiry) configureMessages(opts *consumeOpts) error {
 // PullMaxBytes limits the number of bytes to be buffered in the client.
 // If not provided, the limit is not set (max messages will be used instead).
 // This option is exclusive with PullMaxMessages.
+//
+// PullMaxBytes implements PullConsumeOpt and PullMessagesOpt and thus can
+// be used to configure both Consumer.Consume and Consumer.Messages.
 type PullMaxBytes int
 
 func (max PullMaxBytes) configureConsume(opts *consumeOpts) error {
@@ -166,8 +175,11 @@ func (max PullMaxBytes) configureMessages(opts *consumeOpts) error {
 	return nil
 }
 
-// PullThresholdMessages sets the message count on which Consume will trigger
+// PullThresholdMessages sets the message count on which consuming will trigger
 // new pull request to the server. Defaults to 50% of MaxMessages.
+//
+// PullThresholdMessages implements PullConsumeOpt and PullMessagesOpt and thus
+// can be used to configure both Consumer.Consume and Consumer.Messages.
 type PullThresholdMessages int
 
 func (t PullThresholdMessages) configureConsume(opts *consumeOpts) error {
@@ -180,8 +192,11 @@ func (t PullThresholdMessages) configureMessages(opts *consumeOpts) error {
 	return nil
 }
 
-// PullThresholdBytes sets the byte count on which Consume will trigger
+// PullThresholdBytes sets the byte count on which consuming will trigger
 // new pull request to the server. Defaults to 50% of MaxBytes (if set).
+//
+// PullThresholdBytes implements PullConsumeOpt and PullMessagesOpt and thus
+// can be used to configure both Consumer.Consume and Consumer.Messages.
 type PullThresholdBytes int
 
 func (t PullThresholdBytes) configureConsume(opts *consumeOpts) error {
@@ -199,6 +214,9 @@ func (t PullThresholdBytes) configureMessages(opts *consumeOpts) error {
 // than the idle heartbeat setting, the subscription will be removed
 // and error will be passed to the message handler.
 // If not provided, a default PullExpiry / 2 will be used (capped at 30 seconds)
+//
+// PullHeartbeat implements PullConsumeOpt and PullMessagesOpt and thus can
+// be used to configure both Consumer.Consume and Consumer.Messages.
 type PullHeartbeat time.Duration
 
 func (hb PullHeartbeat) configureConsume(opts *consumeOpts) error {
@@ -221,6 +239,9 @@ func (hb PullHeartbeat) configureMessages(opts *consumeOpts) error {
 
 // StopAfter sets the number of messages after which the consumer is
 // automatically stopped and no more messages are pulled from the server.
+//
+// StopAfter implements PullConsumeOpt and PullMessagesOpt and thus can
+// be used to configure both Consumer.Consume and Consumer.Messages.
 type StopAfter int
 
 func (nMsgs StopAfter) configureConsume(opts *consumeOpts) error {
