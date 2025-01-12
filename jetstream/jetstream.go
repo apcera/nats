@@ -901,7 +901,7 @@ func (js *jetStream) StreamNames(ctx context.Context, opts ...StreamListOpt) Str
 	for _, opt := range opts {
 		if err := opt(&streamsReq); err != nil {
 			l.err = err
-			close(l.streams)
+			close(l.names)
 			return l
 		}
 	}

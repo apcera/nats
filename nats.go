@@ -4685,14 +4685,14 @@ func (s *Subscription) Unsubscribe() error {
 // checkDrained will watch for a subscription to be fully drained
 // and then remove it.
 func (nc *Conn) checkDrained(sub *Subscription) {
+	if nc == nil || sub == nil {
+		return
+	}
 	defer func() {
 		sub.mu.Lock()
 		defer sub.mu.Unlock()
 		sub.draining = false
 	}()
-	if nc == nil || sub == nil {
-		return
-	}
 
 	// This allows us to know that whatever we have in the client pending
 	// is correct and the server will not send additional information.
