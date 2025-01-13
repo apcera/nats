@@ -1863,7 +1863,13 @@ func (js *js) subscribe(subj, queue string, cb MsgHandler, ch chan *Msg, isSync,
 		} else if consName == "" {
 			consName = getHash(nuid.Next())
 		}
-		info, err := js.upsertConsumer(stream, consName, ccreq.Config)
+
+		opts := make([]JSOpt, 0, 1)
+		if ctx != nil {
+			opts = append(opts, Context(ctx))
+		}
+
+		info, err := js.upsertConsumer(stream, consName, ccreq.Config, opts...)
 		if err != nil {
 			var apiErr *APIError
 			if ok := errors.As(err, &apiErr); !ok {
