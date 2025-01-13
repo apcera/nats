@@ -171,6 +171,7 @@ type (
 		WatchFiltered(ctx context.Context, keys []string, opts ...WatchOpt) (KeyWatcher, error)
 
 		// Keys will return all keys.
+		//
 		// Deprecated: Use ListKeys instead to avoid memory issues.
 		Keys(ctx context.Context, opts ...WatchOpt) ([]string, error)
 

@@ -69,6 +69,7 @@ type KeyValue interface {
 	// argument. It can be configured with the same options as Watch.
 	WatchFiltered(keys []string, opts ...WatchOpt) (KeyWatcher, error)
 	// Keys will return all keys.
+	//
 	// Deprecated: Use ListKeys instead to avoid memory issues.
 	Keys(opts ...WatchOpt) ([]string, error)
 	// ListKeys will return all keys in a channel.

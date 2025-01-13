@@ -904,7 +904,8 @@ func TestKeyValueKeys(t *testing.T) {
 		expectOk(t, err)
 	}
 
-	_, err = kv.Keys(ctx)
+	//lint:ignore SA1019 testing deprecated api
+	_, err = kv.Keys(ctx) //nolint:staticcheck // testing deprecated api
 	expectErr(t, err, jetstream.ErrNoKeysFound)
 
 	// Put in a few names and ages.
@@ -918,6 +919,7 @@ func TestKeyValueKeys(t *testing.T) {
 	put("age", "44")
 	put("country", "MT")
 
+	//lint:ignore SA1019 testing deprecated api
 	keys, err := kv.Keys(ctx)
 	expectOk(t, err)
 
@@ -945,7 +947,9 @@ func TestKeyValueKeys(t *testing.T) {
 	err = kv.Purge(ctx, "country")
 	expectOk(t, err)
 
+	//lint:ignore SA1019 testing deprecated api
 	keys, err = kv.Keys(ctx)
+
 	expectOk(t, err)
 
 	kmap = make(map[string]struct{})
