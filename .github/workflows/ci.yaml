@@ -1,5 +1,5 @@
 name: ci
-on: 
+on:
   push:
     branches:
       - main
@@ -8,67 +8,67 @@ on:
     types: [published]
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-      
-            - name: Setup Go
-              uses: actions/setup-go@v5
-              with:
-                go-version: 'stable'
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Install deps
-              shell: bash --noprofile --norc -x -eo pipefail {0}
-              run: |
-                go get -t ./...
-                go install honnef.co/go/tools/cmd/staticcheck@latest
-                go install github.com/client9/misspell/cmd/misspell@latest
-                go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-            
-            - name: Run linters
-              shell: bash --noprofile --norc -x -eo pipefail {0}
-              run: |
-                $(exit $(go fmt -modfile=go_test.mod  ./... | wc -l))
-                go vet -modfile=go_test.mod ./... 
-                GOFLAGS="-mod=mod -modfile=go_test.mod" staticcheck ./...
-                find . -type f -name "*.go" | xargs misspell -error -locale US
-                golangci-lint run --timeout 5m0s ./jetstream/...
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
 
-    test:
-        runs-on: ubuntu-latest
+      - name: Install deps
+        shell: bash --noprofile --norc -x -eo pipefail {0}
+        run: |
+          go get -t ./...
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/client9/misspell/cmd/misspell@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-        strategy:
-            matrix:
-              go: [ "1.22", "1.23" ]
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-      
-            - name: Setup Go
-              uses: actions/setup-go@v5
-              with:
-                go-version: ${{ matrix.go }}
+      - name: Run linters
+        shell: bash --noprofile --norc -x -eo pipefail {0}
+        run: |
+          $(exit $(go fmt -modfile=go_test.mod  ./... | wc -l))
+          go vet -modfile=go_test.mod ./... 
+          GOFLAGS="-mod=mod -modfile=go_test.mod" staticcheck ./...
+          find . -type f -name "*.go" | xargs misspell -error -locale US
+          golangci-lint run -v --timeout 5m0s ./jetstream/...
 
-            - name: Install deps
-              shell: bash --noprofile --norc -x -eo pipefail {0}
-              run: |
-                go install github.com/mattn/goveralls@latest
-                go install github.com/wadey/gocovmerge@latest
+  test:
+    runs-on: ubuntu-latest
 
-            - name: Test and coverage
-              shell: bash --noprofile --norc -x -eo pipefail {0}
-              run: |
-                go test -modfile=go_test.mod -v -run=TestNoRace -p=1 ./... --failfast -vet=off
-                if [ "${{ matrix.go }}" = "1.23" ]; then
-                  ./scripts/cov.sh CI
-                else
-                  go test -modfile=go_test.mod -race -v -p=1 ./... --failfast -vet=off -tags=internal_testing
-                fi
+    strategy:
+      matrix:
+        go: ["1.22", "1.23"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Coveralls
-              if: matrix.go == '1.23'
-              uses: coverallsapp/github-action@v2
-              with:
-               file: acc.out
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Install deps
+        shell: bash --noprofile --norc -x -eo pipefail {0}
+        run: |
+          go install github.com/mattn/goveralls@latest
+          go install github.com/wadey/gocovmerge@latest
+
+      - name: Test and coverage
+        shell: bash --noprofile --norc -x -eo pipefail {0}
+        run: |
+          go test -modfile=go_test.mod -v -run=TestNoRace -p=1 ./... --failfast -vet=off
+          if [ "${{ matrix.go }}" = "1.23" ]; then
+            ./scripts/cov.sh CI
+          else
+            go test -modfile=go_test.mod -race -v -p=1 ./... --failfast -vet=off -tags=internal_testing
+          fi
+
+      - name: Coveralls
+        if: matrix.go == '1.23'
+        uses: coverallsapp/github-action@v2
+        with:
+          file: acc.out
