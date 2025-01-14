@@ -27,8 +27,6 @@ import (
 	"github.com/nats-io/nats.go/encoders/protobuf/testdata"
 )
 
-//lint:file-ignore SA1019 Ignore deprecation warnings for EncodedConn
-
 func NewDefaultEConn(t *testing.T) *nats.EncodedConn {
 	ec, err := nats.NewEncodedConn(NewConnection(t, TEST_PORT), nats.DEFAULT_ENCODER)
 	if err != nil {
@@ -1095,7 +1093,7 @@ func TestEncodedContextInvalid(t *testing.T) {
 	}
 	req := &request{Message: "Hello"}
 	resp := &response{}
-	//lint:ignore SA1012 testing that passing nil fails
+	//nolint:staticcheck // SA1012 testing that passing nil fails
 	err = c.RequestWithContext(nil, "slow", req, resp)
 	if err == nil {
 		t.Fatal("Expected request to fail with error")

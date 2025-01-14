@@ -1,16 +1,68 @@
+run:
+  concurrency: 4
+  issues-exit-code: 1
+  tests: true
+  modules-download-mode: readonly
+  timeout: 5m
+
+output:
+  formats:
+    - format: colored-line-number
+      path: stdout
+  print-issued-lines: true
+  print-linter-name: true
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - govet
+    - staticcheck
+    - misspell
+
+linters-settings:
+  misspell:
+    locale: US
+  gofmt:
+    # Simplify code: gofmt with `-s` option.
+    simplify: false
+
+  staticcheck:
+    # SAxxxx checks in https://staticcheck.dev/docs/configuration/options/#checks
+    # Example (to disable some checks): [ "all", "-SA1000", "-SA1001"]
+    # Default: ["*"]
+    checks:
+      - "all"
+      - "-SA1000"
+      - "-ST1003"
+      - "-ST1016"
+      - "-ST1020"
+      - "-ST1021"
+      - "-ST1022"
+
 issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
   exclude-rules:
-    - linters:
-      - errcheck
-      text: "Unsubscribe"
-    - linters:
-      - errcheck
-      text: "Drain"
-    - linters:
-      - errcheck
-      text: "msg.Ack"
-    - linters:
-      - errcheck
-      text: "watcher.Stop"
+    - path: enc.go
+      linters:
+        - staticcheck
+      text: "SA1019:"
+    - path: enc_test.go
+      linters:
+        - staticcheck
+      text: "SA1019:"
+    - path: gob_test.go
+      linters:
+        - staticcheck
+      text: "SA1019:"
+    - path: json_test.go
+      linters:
+        - staticcheck
+      text: "SA1019:"
+    - path: netchan_test.go
+      linters:
+        - staticcheck
+      text: "SA1019:"
+    - path: protobuf_test.go
+      linters:
+        - staticcheck
+      text: "SA1019:"

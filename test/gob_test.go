@@ -20,8 +20,6 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-//lint:file-ignore SA1019 Ignore deprecation warnings for EncodedConn
-
 func NewGobEncodedConn(tl TestLogger) *nats.EncodedConn {
 	ec, err := nats.NewEncodedConn(NewConnection(tl, TEST_PORT), nats.GOB_ENCODER)
 	if err != nil {

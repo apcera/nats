@@ -24,8 +24,6 @@ import (
 	"github.com/nats-io/nats.go/encoders/builtin"
 )
 
-//lint:file-ignore SA1019 Ignore deprecation warnings for EncodedConn
-
 // Encoder interface is for all register encoders
 //
 // Deprecated: Encoded connections are no longer supported.

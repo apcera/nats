@@ -20,8 +20,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-//lint:file-ignore SA1019 Ignore deprecation warnings for EncodedConn
-
 // Additional index for registered Encoders.
 const (
 	PROTOBUF_ENCODER = "protobuf"

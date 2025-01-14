@@ -22,8 +22,6 @@ import (
 	"github.com/nats-io/nats.go/encoders/builtin"
 )
 
-//lint:file-ignore SA1019 Ignore deprecation warnings for EncodedConn
-
 func NewJsonEncodedConn(tl TestLogger) *nats.EncodedConn {
 	ec, err := nats.NewEncodedConn(NewConnection(tl, TEST_PORT), nats.JSON_ENCODER)
 	if err != nil {
