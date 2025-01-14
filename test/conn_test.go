@@ -962,6 +962,7 @@ func TestCallbacksOrder(t *testing.T) {
 
 	nc, err := nats.Connect(url,
 		nats.ConnectHandler(connCh),
+		//lint:ignore SA1019 testing deprecated api
 		nats.DisconnectHandler(dch),
 		nats.ReconnectHandler(rch),
 		nats.ClosedHandler(cch),
@@ -1718,6 +1719,7 @@ func TestLastErrorNoRace(t *testing.T) {
 		closedCh <- struct{}{}
 	}
 	nc, err := nats.Connect(nats.DefaultURL,
+		//lint:ignore SA1019 testing deprecated api
 		nats.DisconnectHandler(dch),
 		nats.ClosedHandler(cch),
 		nats.MaxReconnects(-1),
@@ -1769,7 +1771,10 @@ func TestUseCustomDialer(t *testing.T) {
 		t.Fatalf("Unexpected error on connect: %v", err)
 	}
 	defer nc.Close()
+
+	//lint:ignore SA1019 testing deprecated api
 	if nc.Opts.Dialer != dialer {
+		//lint:ignore SA1019 testing deprecated api
 		t.Fatalf("Expected Dialer to be set to %v, got %v", dialer, nc.Opts.Dialer)
 	}
 
@@ -1778,11 +1783,13 @@ func TestUseCustomDialer(t *testing.T) {
 		Timeout:       5 * time.Second,
 		FallbackDelay: -1,
 	}
+	//lint:ignore SA1019 testing deprecated api
 	nc2, err := nats.Connect(nats.DefaultURL, nats.Dialer(dialer2))
 	if err != nil {
 		t.Fatalf("Unexpected error on connect: %v", err)
 	}
 	defer nc2.Close()
+	//lint:ignore SA1019 testing deprecated api
 	if nc2.Opts.Dialer.FallbackDelay > 0 {
 		t.Fatalf("Expected for dialer to be customized to disable dual stack support")
 	}
@@ -1793,7 +1800,9 @@ func TestUseCustomDialer(t *testing.T) {
 		t.Fatalf("Unexpected error on connect: %v", err)
 	}
 	defer nc3.Close()
+	//lint:ignore SA1019 testing deprecated api
 	if nc3.Opts.Dialer.Timeout != nats.DefaultTimeout {
+		//lint:ignore SA1019 testing deprecated api
 		t.Fatalf("Expected Dialer.Timeout to be set to %v, got %v", nats.DefaultTimeout, nc.Opts.Dialer.Timeout)
 	}
 
@@ -1826,6 +1835,7 @@ func TestUseCustomDialer(t *testing.T) {
 	}
 	// Same with variadic
 	foptions := [][]nats.Option{
+		//lint:ignore SA1019 testing deprecated api
 		{nats.Dialer(dialer), nats.SetCustomDialer(cdialer)},
 		{nats.SetCustomDialer(cdialer)},
 	}
@@ -1862,6 +1872,7 @@ func TestDefaultOptionsDialer(t *testing.T) {
 	}
 	defer nc2.Close()
 
+	//lint:ignore SA1019 testing deprecated api
 	if nc1.Opts.Dialer == nc2.Opts.Dialer {
 		t.Fatalf("Expected each connection to have its own dialer")
 	}

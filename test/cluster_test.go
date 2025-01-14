@@ -377,7 +377,7 @@ func TestProperReconnectDelay(t *testing.T) {
 	ccb := func(_ *nats.Conn) {
 		closedCbCalled = true
 	}
-
+	//lint:ignore SA1019 testing deprecated api
 	nc, err := nats.Connect(srvs, nats.DontRandomize(), nats.DisconnectHandler(dcb), nats.ClosedHandler(ccb))
 	if err != nil {
 		t.Fatalf("Expected to connect, got err: %v\n", err)

@@ -727,6 +727,7 @@ func TestKeyValueKeys(t *testing.T) {
 		expectOk(t, err)
 	}
 
+	//lint:ignore SA1019 testing deprecated api
 	_, err = kv.Keys()
 	expectErr(t, err, nats.ErrNoKeysFound)
 
@@ -741,6 +742,7 @@ func TestKeyValueKeys(t *testing.T) {
 	put("age", "44")
 	put("country", "MT")
 
+	//lint:ignore SA1019 testing deprecated api
 	keys, err := kv.Keys()
 	expectOk(t, err)
 
@@ -768,6 +770,7 @@ func TestKeyValueKeys(t *testing.T) {
 	err = kv.Purge("country")
 	expectOk(t, err)
 
+	//lint:ignore SA1019 testing deprecated api
 	keys, err = kv.Keys()
 	expectOk(t, err)
 

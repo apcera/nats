@@ -3072,6 +3072,7 @@ func TestStreamLister(t *testing.T) {
 			}
 			// test the deprecated StreamsInfo()
 			infos = make([]*nats.StreamInfo, 0)
+			//lint:ignore SA1019 testing deprecated api
 			for info := range js.StreamsInfo() {
 				infos = append(infos, info)
 			}
@@ -3196,6 +3197,7 @@ func TestConsumersLister(t *testing.T) {
 
 			// test the deprecated ConsumersInfo()
 			infos = make([]*nats.ConsumerInfo, 0)
+			//lint:ignore SA1019 testing deprecated api
 			for info := range js.ConsumersInfo("foo") {
 				infos = append(infos, info)
 			}
