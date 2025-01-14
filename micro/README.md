@@ -1,4 +1,4 @@
-# NATS micro
+# NATS micro [![GoDoc](https://pkg.go.dev/badge/github.com/nats-io/nats.go/micro.svg)](https://pkg.go.dev/github.com/nats-io/nats.go/micro)
 
 - [Overview](#overview)
 - [Basic usage](#basic-usage)
